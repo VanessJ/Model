@@ -1,37 +1,53 @@
 import csv
+import enum
 import os
 from os import listdir
 from os.path import isfile, join
 import re
 
+
+class Labels(enum.Enum):
+    MASS_MALIGN = 0
+    MASS_BELIGN = 1
+    CALC_MALIGN = 2
+    CALC_BELIGN = 3
+
+
 class CSVLoader:
 
+    def __init__(self, absolute_path):
+        self.REBUILD_CSV = False
+        self.absolute_path = absolute_path
+
     def loadCSV(self, path):
-        with open(path) as file:
-            csvreader = csv.reader(file)
+        if self.REBUILD_CSV:
+            with open(path) as file:
+                csvreader = csv.reader(file)
 
-            # create modified csv file
-            name = self.create_modified_file_name(path)
-            f = open(name, 'w')
-            writer = csv.writer(f)
-            header = ['CATEGORY', 'IMG_PATH']
-            writer.writerow(header)
+                # create modified csv file
+                name = self.create_modified_file_name(path)
+                f = open(name, 'w', newline='')
+                writer = csv.writer(f)
+                header = ['CATEGORY', 'IMG_PATH']
+                writer.writerow(header)
 
-            header = next(csvreader)
-            line_count = 1
-            for row in csvreader:
-                # print(f'{", ".join(row)}')
-                cropped_image = row[12]
-                roi_mask = row[13]
-                line_count += 1
-                img_path = self.get_img_path(cropped_image, roi_mask)
-                category = row[9]
-                category = self.get_category(category, path)
+                header = next(csvreader)
+                line_count = 1
+                for row in csvreader:
+                    # print(f'{", ".join(row)}')
+                    cropped_image = row[12]
+                    roi_mask = row[13]
+                    line_count += 1
+                    img_path = self.get_img_path(cropped_image, roi_mask)
+                    category = row[9]
+                    category = self.get_category(category, path)
 
-                new_row = [category, img_path]
-                writer.writerow(new_row)
+                    new_row = [category, img_path]
+                    writer.writerow(new_row)
 
-            print(f'Processed {line_count} lines.')
+                print(f'Processed {line_count} lines.')
+        else:
+            print("Creation of new CSV file skipped")
 
     @staticmethod
     def create_modified_file_name(original_file):
@@ -44,10 +60,6 @@ class CSVLoader:
     def get_category(category, path):
         MASS = -1
         CALC = -2
-        MASS_MALIGN = 0
-        MASS_BELIGN = 1
-        CALC_MALIGN = 2
-        CALC_BELIGN = 3
 
         if bool(re.search('mass', path)):
             pre_category = MASS
@@ -56,14 +68,14 @@ class CSVLoader:
 
         if pre_category == MASS:
             if category.startswith('M'):
-                category = MASS_MALIGN
+                category = Labels.MASS_MALIGN.value
             else:
-                category = MASS_BELIGN
+                category = Labels.MASS_BELIGN.value
         else:
             if category.startswith('M'):
-                category = CALC_MALIGN
+                category = Labels.CALC_MALIGN.value
             else:
-                category = CALC_BELIGN
+                category = Labels.CALC_BELIGN.value
 
         return category
 
@@ -128,12 +140,10 @@ class CSVLoader:
         else:
             return files[0]
 
-    @staticmethod
-    def fix_path(path):
-        absolute = 'D:\Adam\manifest-ZkhPvrLo5216730872708713142\CBIS-DDSM\\'
+    def fix_path(self, path):
         path_list = path.split('/')
         path_list.pop()
-        fixed_path = absolute + '\\'.join(path_list)
+        fixed_path = self.absolute_path + '\\'.join(path_list)
         return fixed_path
 
 
